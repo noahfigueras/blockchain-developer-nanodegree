@@ -15,6 +15,8 @@ App = {
     productNotes: null,
     productPrice: 0,
     productID: 0,
+    distributorID:"0x0000000000000000000000000000000000000000",
+    retailerID:"0x0000000000000000000000000000000000000000",
     buyerID: "0x0000000000000000000000000000000000000000",
 
     init: async function () {
@@ -35,6 +37,8 @@ App = {
         App.productNotes = $("#productNotes").val();
         App.productPrice = $("#productPrice").val();
         App.productID = $("#productID").val();
+        App.distributorID = $("#distributorID").val();
+        App.retailerID = $("#retailerID").val();
         App.buyerID = $("#buyerID").val();
 
         console.log(
@@ -49,6 +53,8 @@ App = {
             App.productNotes, 
             App.productPrice, 
             App.productID, 
+            App.distributorID,
+            App.retailerID,
             App.buyerID
         );
     },
@@ -178,6 +184,7 @@ App = {
         }).then(function(result) {
             $("#ftc-item").text(result);
             console.log('harvestItem',result);
+            alert(`Product added successfully with owner: ${App.metamaskAccountID}`)
         }).catch(function(err) {
             console.log(err.message);
         });
@@ -233,7 +240,7 @@ App = {
 
         App.contracts.SupplyChain.deployed().then(function(instance) {
             const walletValue = web3.toWei(3, "ether");
-            return instance.buyItem(App.upc, App.metamaskAccountID, {from: App.metamaskAccountID, value: walletValue});
+            return instance.buyItem(App.upc, {from: App.metamaskAccountID, value: walletValue});
         }).then(function(result) {
             $("#ftc-item").text(result);
             console.log('buyItem',result);

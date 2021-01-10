@@ -17,19 +17,26 @@ contract('SupplyChain', function(accounts) {
     const productPrice = web3.utils.toWei('1', "ether")
     var itemState = 0
     const buyerID = accounts[2]
+    const distributorID = accounts[3]
+    const retailerID = accounts[4]
     const emptyAddress = '0x00000000000000000000000000000000000000'
 
     console.log("ganache-cli accounts used here...")
     console.log("Contract Owner: accounts[0] ", accounts[0])
     console.log("FisherMan: accounts[1] ", accounts[1])
     console.log("Buyer: accounts[2] ", accounts[2])
+    console.log("Distributor: accounts[3] ", accounts[3])
+    console.log("Retailer: accounts[4] ", accounts[4])
 
     // 1st Test
     it("Testing smart contract function harvestItem() that allows a fisher Man to harvest fish", async() => {
         const supplyChain = await SupplyChain.deployed()
         
+        //Add Fisher role permissions
+        await supplyChain.addFisher(originFisherManID)
+
         // Mark an item as Harvested by calling function harvestItem()
-        await supplyChain.harvestItem(upc, originFisherManID, originFisherManName, originFisherManInfo, itemCaughtLatitude, itemCaughtLongitude, productNotes)
+        await supplyChain.harvestItem(upc, originFisherManID, originFisherManName, originFisherManInfo, itemCaughtLatitude, itemCaughtLongitude, productNotes, {from: originFisherManID})
 
         // Retrieve the just now saved item from blockchain by calling function fetchItem()
         const resultBufferOne = await supplyChain.fetchItemBufferOne.call(upc)
@@ -52,7 +59,7 @@ contract('SupplyChain', function(accounts) {
         const supplyChain = await SupplyChain.deployed()
         
         // Mark an item as Processed by calling function processtItem()
-        await supplyChain.processItem(upc)
+        await supplyChain.processItem(upc, {from: originFisherManID})
 
         // Retrieve the just now saved item from blockchain by calling function fetchItem()
         const resultBufferTwo = await supplyChain.fetchItemBufferTwo.call(upc)
@@ -65,8 +72,11 @@ contract('SupplyChain', function(accounts) {
     it("Testing smart contract function packItem() that allows a fisherMan to pack the fish", async() => {
         const supplyChain = await SupplyChain.deployed()
         
+        //Add Distributor role permissions
+        await supplyChain.addDistributor(distributorID)
+
         // Mark an item as Packed by calling function packItem()
-        await supplyChain.packItem(upc)
+        await supplyChain.packItem(upc, {from: distributorID})
 
         // Retrieve the just now saved item from blockchain by calling function fetchItem()
         const resultBufferTwo = await supplyChain.fetchItemBufferTwo.call(upc)
@@ -80,8 +90,11 @@ contract('SupplyChain', function(accounts) {
     it("Testing smart contract function sellItem() that allows a fisherMan to sell the fish", async() => {
         const supplyChain = await SupplyChain.deployed()
         
+        //Add Retail role permissions
+        await supplyChain.addRetailer(retailerID)
+
         // Mark an item as ForSale by calling function sellItem()
-        await supplyChain.sellItem(upc, productPrice)
+        await supplyChain.sellItem(upc, productPrice, {from: retailerID})
 
         // Retrieve the just now saved item from blockchain by calling function fetchItem()
         const resultBufferTwo = await supplyChain.fetchItemBufferTwo.call(upc)
@@ -96,15 +109,18 @@ contract('SupplyChain', function(accounts) {
     it("Testing smart contract function buyItem() that allows a buyer to buy fish", async() => {
         const supplyChain = await SupplyChain.deployed()
         
+        //Add Buyer role permissions
+        await supplyChain.addBuyer(buyerID)
+        
         // Mark an item as Sold by calling function buyItem()
-        await supplyChain.buyItem(upc, buyerID, {value: productPrice})
+        await supplyChain.buyItem(upc, {from: buyerID, value: productPrice})
 
         // Retrieve the just now saved item from blockchain by calling function fetchItem()
         const resultBufferOne = await supplyChain.fetchItemBufferOne.call(upc)
         const resultBufferTwo = await supplyChain.fetchItemBufferTwo.call(upc)
 
         // Verify the result set
-        assert.equal(resultBufferOne[2], ownerID, 'Error: Invalid ownerID')
+        assert.equal(resultBufferOne[2], buyerID, 'Error: Invalid ownerID')
         assert.equal(resultBufferTwo[6], buyerID, 'Error: Invalid buyerID')
         assert.equal(resultBufferTwo[5], 4, 'Error: Invalid item State')
     })    
@@ -114,7 +130,7 @@ contract('SupplyChain', function(accounts) {
         const supplyChain = await SupplyChain.deployed()
         
         // Mark an item as ready to pick up by calling function readyToPickUp()
-        await supplyChain.readyToPickUp(upc)
+        await supplyChain.readyToPickUp(upc, {from: retailerID})
 
         // Retrieve the just now saved item from blockchain by calling function fetchItem()
         const resultBufferTwo = await supplyChain.fetchItemBufferTwo.call(upc)
@@ -128,7 +144,7 @@ contract('SupplyChain', function(accounts) {
         const supplyChain = await SupplyChain.deployed()
         
         // Mark an item as pickedUp by calling function itemPickedUp()
-        await supplyChain.itemPickedUp(upc)
+        await supplyChain.itemPickedUp(upc,{from: retailerID})
 
         // Retrieve the just now saved item from blockchain by calling function fetchItem()
         const resultBufferTwo = await supplyChain.fetchItemBufferTwo.call(upc)
@@ -143,7 +159,7 @@ contract('SupplyChain', function(accounts) {
         const supplyChain = await SupplyChain.deployed()
         
         // Mark an item as Purchased by calling function purchaseItem()
-        await supplyChain.purchaseItem(upc)
+        await supplyChain.purchaseItem(upc, {from: retailerID})
 
         // Retrieve the just now saved item from blockchain by calling function fetchItem()
         const resultBufferTwo = await supplyChain.fetchItemBufferTwo.call(upc)
@@ -163,7 +179,7 @@ contract('SupplyChain', function(accounts) {
         // Verify the result set:
         assert.equal(resultBufferOne[0], sku, 'Error: Invalid item SKU')
         assert.equal(resultBufferOne[1], upc, 'Error: Invalid item UPC')
-        assert.equal(resultBufferOne[2], ownerID, 'Error: Missing or Invalid ownerID')
+        assert.equal(resultBufferOne[2], buyerID, 'Error: Missing or Invalid ownerID')
         assert.equal(resultBufferOne[3], originFisherManID, 'Error: Missing or Invalid originFisherManID')
         assert.equal(resultBufferOne[4], originFisherManName, 'Error: Missing or Invalid originFisherManName')
         assert.equal(resultBufferOne[5], originFisherManInfo, 'Error: Missing or Invalid originFisherManInfo')

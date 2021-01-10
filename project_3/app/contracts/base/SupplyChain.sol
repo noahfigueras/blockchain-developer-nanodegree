@@ -2,9 +2,11 @@ pragma solidity >=0.4.22 <0.7.0;
 
 //Importing role files
 import "../accessControl/FisherMan.sol";
-import"../accessControl/RestaurantOwner.sol";
+import "../accessControl/RestaurantOwner.sol";
+import "../accessControl/Distributor.sol";
+import "../accessControl/Retailer.sol";
 
-contract SupplyChain is FisherMan,RestaurantOwner {
+contract SupplyChain is FisherMan,RestaurantOwner,Distributor,Retailer {
 
     address payable owner;
     
@@ -47,6 +49,8 @@ contract SupplyChain is FisherMan,RestaurantOwner {
         string productNotes;
         uint productPrice;
         State itemState;
+        address distributorID;
+        address retailerID;
         address payable buyerID;
     }
 
@@ -145,12 +149,14 @@ contract SupplyChain is FisherMan,RestaurantOwner {
     }
 
     // Define a function 'harvestItem' that allows a fisherMan to mark an item 'Harvested'
-    function harvestItem(uint _upc, address payable _originFisherManID, string memory _originFisherManName, string memory _originFisherManInfo, string memory _itemCaughtLatitude, string memory _itemCaughtLongitude, string memory _productNotes) public 
+    function harvestItem(uint _upc, address payable _originFisherManID, string memory _originFisherManName, string memory _originFisherManInfo, string memory _itemCaughtLatitude, string memory _itemCaughtLongitude, string memory _productNotes) public  
+    //Call modifier to verify caller
+    onlyFisher()
     {
         // Add the new item as part of Harvest
         items[_upc].upc = _upc;
         items[_upc].sku = sku;
-        items[_upc].ownerID = msg.sender;
+        items[_upc].ownerID = owner;
         items[_upc].originFisherManID = _originFisherManID;
         items[_upc].originFisherManName = _originFisherManName; 
         items[_upc].originFisherManInfo = _originFisherManInfo;
@@ -183,10 +189,11 @@ contract SupplyChain is FisherMan,RestaurantOwner {
     // Call modifier to check if upc has passed previous supply chain stage
     processed(_upc)
     // Call modifier to verify caller of this function
-    onlyFisher()
+    onlyDistributor()
     {
     // Update the appropriate fields
     items[_upc].itemState = State.Packed;
+    items[_upc].distributorID = msg.sender;
     // Emit the appropriate event
     emit Packed(_upc);
     }
@@ -196,11 +203,12 @@ contract SupplyChain is FisherMan,RestaurantOwner {
     // Call modifier to check if upc has passed previous supply chain stage
     packed(_upc)
     // Call modifier to verify caller of this function
-    onlyFisher()
+    onlyRetailer()
     {
     // Update the appropriate fields
     items[_upc].itemState = State.ForSale;
     items[_upc].productPrice = _price;
+    items[_upc].retailerID = msg.sender;
     // Emit the appropriate event
     emit ForSale(_upc);
     }
@@ -208,18 +216,20 @@ contract SupplyChain is FisherMan,RestaurantOwner {
     // Define a function 'buyItem' that allows the fisherMan to mark an item 'Sold'
     // Use the above defined modifiers to check if the item is available for sale, if the buyer has paid enough, 
     // and any excess ether sent is refunded back to the buyer
-    function buyItem(uint _upc, address payable buyerID) public payable 
+    function buyItem(uint _upc) public payable 
     // Call modifier to check if upc has passed previous supply chain stage
     forSale(_upc)
+    // Call modifier to verify caller of this function
+    onlyBuyer()
     // Call modifer to check if buyer has paid enough
     paidEnough(items[_upc].productPrice)
     // Call modifer to send any excess ether back to buyer
-    checkValue(_upc, buyerID)
+    checkValue(_upc, msg.sender)
     {
 
     // Update the appropriate fields - ownerID, itemState
-    items[_upc].ownerID = msg.sender;
-    items[_upc].buyerID = buyerID;
+    items[_upc].buyerID = msg.sender;
+    items[_upc].ownerID = items[_upc].buyerID;
     items[_upc].itemState = State.Sold;
     // Transfer money to fisherMan
     items[_upc].originFisherManID.transfer(items[_upc].productPrice);
@@ -233,7 +243,7 @@ contract SupplyChain is FisherMan,RestaurantOwner {
     // Call modifier to check if upc has passed previous supply chain stage
     sold(_upc)
     // Call modifier to verify caller of this function
-    onlyFisher()
+    onlyRetailer()
     {
     // Update the appropriate fields
     items[_upc].itemState = State.ReadyPickUp;
@@ -247,6 +257,7 @@ contract SupplyChain is FisherMan,RestaurantOwner {
     // Call modifier to check if upc has passed previous supply chain stage
     readyPickUp(_upc)
     // Access Control List enforced by calling Smart Contract / DApp
+    onlyRetailer()
     {
     // Update the state
     items[_upc].itemState =  State.PickedUp;
@@ -260,6 +271,7 @@ contract SupplyChain is FisherMan,RestaurantOwner {
     // Call modifier to check if upc has passed previous supply chain stage
     pickedUp(_upc)
     // Access Control List enforced by calling Smart Contract / DApp
+    onlyRetailer()
     {
     // Update the appropriate fields - itemState
     items[_upc].itemState = State.Purchased;
@@ -312,7 +324,9 @@ contract SupplyChain is FisherMan,RestaurantOwner {
     string memory productNotes,
     uint    productPrice,
     State   itemState,
-    address buyerID
+    address buyerID,
+    address distributorID,
+    address retailerID
     ) 
     {
     // Assign values to the 9 parameters
@@ -323,6 +337,8 @@ contract SupplyChain is FisherMan,RestaurantOwner {
     productPrice = items[_upc].productPrice;
     itemState = items[_upc].itemState;
     buyerID = items[_upc].buyerID;
+    distributorID = items[_upc].distributorID;
+    retailerID = items[_upc].retailerID;
 
     return 
     (
@@ -332,7 +348,9 @@ contract SupplyChain is FisherMan,RestaurantOwner {
     productNotes,
     productPrice,
     itemState,
-    buyerID
+    buyerID,
+    distributorID,
+    retailerID
     );
     }
 }
