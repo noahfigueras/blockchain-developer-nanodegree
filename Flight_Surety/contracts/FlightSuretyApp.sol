@@ -25,7 +25,7 @@ contract FlightSuretyApp {
     uint8 private constant STATUS_CODE_LATE_TECHNICAL = 40;
     uint8 private constant STATUS_CODE_LATE_OTHER = 50;
 
-    uint256 private MIN_AIRLINES_COUNT = 5;
+    uint256 private MIN_AIRLINES_COUNT = 4;
     address private contractOwner;          // Account used to deploy contract
 
     struct Flight {
@@ -121,9 +121,8 @@ contract FlightSuretyApp {
     //Caller has to be a Funded registered Airline
     requireAirlineFunded(msg.sender) 
     {
-        if(dataContract.getFundedAirlines() <= MIN_AIRLINES_COUNT){
+        if(dataContract.getFundedAirlines() < MIN_AIRLINES_COUNT){
             dataContract.registerAirline(airlineAddress, false); 
-            emit AirlineRegistered(airlineAddress);
         } else {
             dataContract.registerAirline(airlineAddress, true);
         }

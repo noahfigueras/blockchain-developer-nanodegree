@@ -5,11 +5,11 @@ var FlightSuretyData = artifacts.require('FlightSuretyData');
 contract('Flight Surety Tests', function (accounts) {
 
     const owner = accounts[0];
-    const firstAirline = FlightSuretyData.address;
+    const firstAirline = accounts[5];
     
     console.log("ganache-cli accounts used here...")
     console.log("Contract Owner: accounts[0] ", accounts[0])
-    console.log("First Airline: accounts[1] ", accounts[1])  
+    console.log("First Airline: accounts[5] ", firstAirline);  
 
   /****************************************************************************************/
   /* Operations and Settings                                                              */
@@ -93,6 +93,65 @@ contract('Flight Surety Tests', function (accounts) {
     assert.equal(reverted, true, "Airline should not be able to register another airline if it hasn't provided funding");
 
   });
- 
 
+  it('(airline) Funded Airline Registers correctly whithout multiparty consensus', async () => {
+    
+    const flightSuretyData = await FlightSuretyData.deployed()
+    const flightSurety = await FlightSuretyApp.deployed()
+
+    // ARRANGE
+    let newAirline = accounts[2];
+    let reverted = false;
+
+    // ACT
+    try {
+        await flightSuretyData.fund(firstAirline, {from: firstAirline, value: web3.utils.toWei('11', "ether")});
+        await flightSurety.registerAirline(newAirline, {from: firstAirline});
+    }
+    catch(e) {
+        reverted = true;
+    }
+
+    // ASSERT
+    assert.equal(reverted, false, "Existing Airline Failed Registering new Airline");
+  });
+ 
+  it('(airline) Funded Airline Registers correctly whith multiparty consensus', async () => {
+
+    const flightSuretyData = await FlightSuretyData.deployed()
+    const flightSurety = await FlightSuretyApp.deployed()
+
+    let airlines = [accounts[1], accounts[3], accounts[4]];
+    let testAirline = accounts[6];
+
+    //Register and Fund Minimum Airlines to activate multiparty
+    for(let i = 0; i < airlines.length; i++) {
+        await flightSurety.registerAirline(airlines[i], {from: firstAirline});
+        await flightSuretyData.fund(airlines[i], {from: airlines[i], value: web3.utils.toWei('11', "ether")});
+    }
+
+    let test1 = false;
+    let test2 = false;
+
+    //Register Airline with Multiparty test 1
+    try {
+        await flightSurety.registerAirline(testAirline, {from: firstAirline});
+    }
+    catch(e) {
+        test1 = true;
+    }
+
+    //Register Airline with Multiparty test 2
+    try {
+        await flightSuretyData.vote(testAirline, {from: accounts[1]});
+        await flightSuretyData.vote(testAirline, {from: accounts[3]});
+    }
+    catch(e) {
+        test2 = true;
+    }
+
+    //ASSERT
+    assert.equal(test1, true, "RegisterAirline should not have worked");
+    assert.equal(test2, false, "RegisterAirline should have worked");
+  });
 });

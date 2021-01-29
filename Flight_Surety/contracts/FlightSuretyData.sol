@@ -25,7 +25,8 @@ contract FlightSuretyData {
     }
 
     mapping(address => Airline) private airlines;
-    
+    mapping(uint256 => address) public registeredAirlinesAddress;
+
     uint256 private registeredAirlines;
     uint256 private fundedAirlines;
     /********************************************************************************************/
@@ -52,6 +53,7 @@ contract FlightSuretyData {
         });
 
         registeredAirlines = registeredAirlines.add(1);
+        registeredAirlinesAddress[registeredAirlines] = airlineAddress;
         emit AirlineRegistered(airlineAddress, airlines[airlineAddress].registered);
     }
 
@@ -134,15 +136,18 @@ contract FlightSuretyData {
     * @dev Add an airline to the registration queue
     *      Can only be called from FlightSuretyApp contract
     *
-    */   
+    **/   
     function registerAirline(address airlineAddress, bool submitToVote) requireIsOperational external {
         //Checking Voting requirements
         if(submitToVote){
             require(airlines[airlineAddress].registered != true,"Airline already registered");
+            emit VoteAdded(airlineAddress);
             _updateVotingProcess(airlineAddress, msg.sender);
         } else {
+            require(airlines[airlineAddress].registered != true,"Airline already registered");
             airlines[airlineAddress].registered = true;
             registeredAirlines = registeredAirlines.add(1);
+            registeredAirlinesAddress[registeredAirlines] = airlineAddress;
             emit AirlineRegistered(airlineAddress, airlines[airlineAddress].registered);
         }
     }
@@ -150,13 +155,23 @@ contract FlightSuretyData {
    /**
     * @dev Updates the Votes from an airline in order to be registered with 
     *      Multiparty Consensus
-    */   
+    **/  
+
+    //Give a vote to an Airline
+    function vote(address airlineAddress) 
+    {
+        require(fundedAirlines >= 4);
+        _updateVotingProcess(airlineAddress,msg.sender);
+    }
+
+    //Update voting process 
     function _updateVotingProcess(address airlineAddress, address votingAirlineAddress) internal 
+    requireIsOperational
     requireAirlineFunded(votingAirlineAddress)
     {
         uint256 min_votes = fundedAirlines.div(2);
         bool airlineVote = airlines[airlineAddress].votes.voters[votingAirlineAddress];
-        
+
         //Add vote
         if(!airlineVote){
             airlines[airlineAddress].votes.voters[votingAirlineAddress] = true;
@@ -165,9 +180,12 @@ contract FlightSuretyData {
         }
       
         //Register Airline
-        require(airlines[airlineAddress].votes.counter >= min_votes,"Airline doesn't have enough votes to be registered");
-        airlines[airlineAddress].registered = true;
-        emit AirlineRegistered(airlineAddress, airlines[airlineAddress].registered);
+        if(airlines[airlineAddress].votes.counter >= min_votes) {
+            airlines[airlineAddress].registered = true;
+            registeredAirlines = registeredAirlines.add(1);
+            registeredAirlinesAddress[registeredAirlines] = airlineAddress;
+            emit AirlineRegistered(airlineAddress, airlines[airlineAddress].registered);
+        }
     }
 
    /**
@@ -238,6 +256,11 @@ contract FlightSuretyData {
         return keccak256(abi.encodePacked(airline, flight, timestamp));
     }
 
+    //Get Airline Address by ID
+    function getAirlineAddressId(uint256 id) public view returns(address) {
+       return  registeredAirlinesAddress[id]; 
+    }
+
     function airlineFunded(address airlineAddress) public view returns(bool) {
         if(airlines[airlineAddress].funded){
             return true;
@@ -245,7 +268,7 @@ contract FlightSuretyData {
         return false;
     }
 
-    function getFundedAirlines() external returns(uint256){
+    function getFundedAirlines() public view returns(uint256){
         return fundedAirlines;
     }
 
