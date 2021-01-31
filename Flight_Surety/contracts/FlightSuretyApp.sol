@@ -43,6 +43,7 @@ contract FlightSuretyApp {
     /*                                       EVENTS                                       */
     /********************************************************************************************/
     event AirlineRegistered(address airlineAddress); 
+    event FlightRegistered(bytes32 flightKey);
     /********************************************************************************************/
     /*                                       FUNCTION MODIFIERS                                 */
     /********************************************************************************************/
@@ -98,14 +99,6 @@ contract FlightSuretyApp {
     /*                                       UTILITY FUNCTIONS                                  */
     /********************************************************************************************/
 
-    //Testing Function
-    function setTestingMode()
-                            public 
-                            requireIsOperational
-                            returns(bool) 
-    {
-        return true; 
-    }
 
     /********************************************************************************************/
     /*                                     SMART CONTRACT FUNCTIONS                             */
@@ -129,23 +122,42 @@ contract FlightSuretyApp {
     }
 
 
-   /**
-    * @dev Register a future flight for insuring.
-    *
-    */  
+    // @dev Register a future flight for insuring.    
     function registerFlight
                                 (
+                                    uint256 departure,
+                                    string flightName
                                 )
-                                external
-                                pure
+                                public
+                                requireIsOperational
+                                requireAirlineFunded(msg.sender)
     {
+        bytes32 flightKey = getFlightKey(msg.sender,flightName, departure);
+        require(!flights[flightKey].isRegistered, "Flight is already registered.");
 
+        flights[flightKey] = FLight({
+            isRegistered: true,
+            name: flightName,
+            departure: departure,
+            statusCode: 0,
+            updatedTimestamp: now,
+            airline: msg.sender
+        });
+
+        dataContract.addFlightKeyToAirline(msg.sender, flightKey);
+        emit FlightRegistered(flightKey);
+ 
     }
     
-   /**
-    * @dev Called after oracle has updated flight status
-    *
-    **/  
+    // @dev Buy Insurance for registered flight 
+    function buy(bytes32 flightKey) 
+    requireIsOperational
+    {
+    require(flights[flightKey].isRegistered, "Flight is not registered");
+    dataContract.buy(flightKey,flights[flightKey].airline);
+    }
+    
+    // @dev Called after oracle has updated flight status
     function processFlightStatus
                                 (
                                     address airline,
@@ -153,9 +165,17 @@ contract FlightSuretyApp {
                                     uint256 timestamp,
                                     uint8 statusCode
                                 )
+                                requireIsOperational
                                 internal
                                 pure
     {
+        //Update FLight Info
+        flights[flight].updatedTimestamp = timestamp;
+        flights[flight].statusCode = statusCode;
+
+        if(statuscode == 20){
+            dataContract.CreditInsuree(flight,airline);
+        }
     }
 
 

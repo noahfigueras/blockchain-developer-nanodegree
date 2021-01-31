@@ -4,6 +4,7 @@ import "../node_modules/openzeppelin-solidity/contracts/math/SafeMath.sol";
 
 contract FlightSuretyData {
     using SafeMath for uint256;
+    using SafeMath for uint;
 
     /********************************************************************************************/
     /*                                       DATA VARIABLES                                     */
@@ -15,6 +16,7 @@ contract FlightSuretyData {
     struct Airline {
         bool registered;
         bool funded;
+        bytes32[] flightKeys;
         uint16 numberOfInsurance;
         Votes votes;
     }
@@ -24,8 +26,21 @@ contract FlightSuretyData {
         mapping(address => bool) voters;
     }
 
+    struct Insurance {
+        address airline;
+        bytes32 flightKey;
+        uint16 numberInsurees;
+        Insuree[] insuree;
+    }
+
+    struct Insuree {
+        uint value;
+        address buyer;
+    }
+    
     mapping(address => Airline) private airlines;
     mapping(uint256 => address) public registeredAirlinesAddress;
+    mapping(bytes32 => Insurance) private insurances;
 
     uint256 private registeredAirlines;
     uint256 private fundedAirlines;
@@ -36,6 +51,8 @@ contract FlightSuretyData {
     event AirlineRegistered(address airlineAddress, bool registered);
     event AirlineFunded(address airlineAddress);
     event VoteAdded(address airlineAddress);
+    event InsuranceAdded(bytes32 flightKey, address buyerAddress);
+    event CreditAddedToInsurees(bytes32 flightKey, address airlineAddress);
 
     /**
     /* @dev Constructor
@@ -132,12 +149,9 @@ contract FlightSuretyData {
     /*                                     SMART CONTRACT FUNCTIONS                             */
     /********************************************************************************************/
 
-   /**
-    * @dev Add an airline to the registration queue
-    *      Can only be called from FlightSuretyApp contract
-    *
-    **/   
-    function registerAirline(address airlineAddress, bool submitToVote) requireIsOperational external {
+    // @dev Add an airline to the registration queue
+    // Can only be called from FlightSuretyApp contract   
+    function registerAirline(address airlineAddress, bool submitToVote) external {
         //Checking Voting requirements
         if(submitToVote){
             require(airlines[airlineAddress].registered != true,"Airline already registered");
@@ -152,10 +166,8 @@ contract FlightSuretyData {
         }
     }
 
-   /**
-    * @dev Updates the Votes from an airline in order to be registered with 
-    *      Multiparty Consensus
-    **/  
+    // @dev Updates the Votes from an airline in order to be registered with 
+    //      Multiparty Consensus  
 
     //Give a vote to an Airline
     function vote(address airlineAddress) 
@@ -188,28 +200,46 @@ contract FlightSuretyData {
         }
     }
 
-   /**
-    * @dev Buy insurance for a flight
-    *
-    */   
-    function buy
-                            (                             
-                            )
-                            external
-                            payable
+   // @dev Add registered flight to airline with key 
+    function addFlightKeyToAirline(address airlineAddress, bytes32 flightKey)
+    external
     {
-
+        airlines[airlineAddress].flightKeys.push(flightKey);
+    }   
+   
+   // @dev Buy insurance for a flight   
+    function buy (bytes32 flight, address airlineAddress) external payable
+    {
+        require(msg.value <= 1 ether);
+        //Check if Insurance for flight is created
+        if(insurances[flight].flightKey != flight){
+            insurances[flight].airline = airlineAddress,
+            insurances[flight].flightKey = flight,
+        }
+             
+        _addNewInsuree(flight,msg.sender,msg.value);
+        emit InsuranceAdded(flight,msg.sender);
     }
 
-    /**
-     *  @dev Credits payouts to insurees
-    */
-    function creditInsurees
-                                (
-                                )
-                                external
-                                pure
+    // @dev Internal function to add Insuree to an Insurance
+    function _addNewInsuree(bytes32 flight, address buyerAddress, uint value) internal
     {
+        Insuree memory buyer;
+        buyer.value = value;
+        buyer.buyer = buyerAddress;
+        insurances[flight].insuree.push(buyer);
+        insurances[flight].numberInsurees.add(1);
+    }
+
+    // @dev Credits payouts to insurees
+    function creditInsurees(bytes32 flight, address airlineAddress) external
+    {
+        uint counter = insurances[flight].numberInsurees;
+        uint credit = 1.5;
+        for(uint i = 0; i < numberInsurees; i++){ 
+            insurances[flight].insuree[i].value = insurances[flight].insuree[i].value.mul(credit);
+        }
+        emit CreditAddedToInsurees(flight,airlineAddress);
     }
     
 
