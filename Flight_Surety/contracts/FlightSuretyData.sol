@@ -4,6 +4,7 @@ import "../node_modules/openzeppelin-solidity/contracts/math/SafeMath.sol";
 
 contract FlightSuretyData {
     using SafeMath for uint256;
+    using SafeMath for uint16;
     using SafeMath for uint;
 
     /********************************************************************************************/
@@ -17,7 +18,6 @@ contract FlightSuretyData {
         bool registered;
         bool funded;
         bytes32[] flightKeys;
-        uint16 numberOfInsurance;
         Votes votes;
     }
 
@@ -37,8 +37,10 @@ contract FlightSuretyData {
         uint value;
         address buyer;
     }
-    
+     
+
     mapping(address => Airline) private airlines;
+    mapping(address => uint256) private insureesWallet;
     mapping(uint256 => address) public registeredAirlinesAddress;
     mapping(bytes32 => Insurance) private insurances;
 
@@ -65,7 +67,7 @@ contract FlightSuretyData {
         airlines[airlineAddress] = Airline({
             registered: true,
             funded: false,
-            numberOfInsurance: 0,
+            flightKeys: new bytes32[](0),
             votes: Votes(0)
         });
 
@@ -170,7 +172,7 @@ contract FlightSuretyData {
     //      Multiparty Consensus  
 
     //Give a vote to an Airline
-    function vote(address airlineAddress) 
+    function vote(address airlineAddress) external 
     {
         require(fundedAirlines >= 4);
         _updateVotingProcess(airlineAddress,msg.sender);
@@ -213,8 +215,8 @@ contract FlightSuretyData {
         require(msg.value <= 1 ether);
         //Check if Insurance for flight is created
         if(insurances[flight].flightKey != flight){
-            insurances[flight].airline = airlineAddress,
-            insurances[flight].flightKey = flight,
+            insurances[flight].airline = airlineAddress;
+            insurances[flight].flightKey = flight;
         }
              
         _addNewInsuree(flight,msg.sender,msg.value);
@@ -227,32 +229,43 @@ contract FlightSuretyData {
         Insuree memory buyer;
         buyer.value = value;
         buyer.buyer = buyerAddress;
+        _updateWallet(buyerAddress, value);
         insurances[flight].insuree.push(buyer);
         insurances[flight].numberInsurees.add(1);
+    }
+
+    // @dev Update Insuree Wallet
+    function _updateWallet(address insureeAddress, uint value) internal
+    {
+        insureesWallet[insureeAddress] = insureesWallet[insureeAddress].add(value);
     }
 
     // @dev Credits payouts to insurees
     function creditInsurees(bytes32 flight, address airlineAddress) external
     {
         uint counter = insurances[flight].numberInsurees;
-        uint credit = 1.5;
-        for(uint i = 0; i < numberInsurees; i++){ 
-            insurances[flight].insuree[i].value = insurances[flight].insuree[i].value.mul(credit);
+        for(uint i = 0; i < counter; i++){ 
+            uint value = insurances[flight].insuree[i].value;
+            uint credit = insurances[flight].insuree[i].value.add(insurances[flight].insuree[i].value.div(2));
+            value = value.add(credit);
+            _updateWallet(insurances[flight].insuree[i].buyer, credit);
         }
         emit CreditAddedToInsurees(flight,airlineAddress);
     }
     
 
     /**
-     *  @dev Transfers eligible payout funds to insuree
+     *  @dev Transfers eligible payout funds to insuree wallet
      *
     */
-    function pay
+    function withdraw
                             (
                             )
                             external
-                            pure
+                            payable
     {
+        require(insureesWallet[msg.sender] >= 0.1 ether, "Not enough found to withdraw");
+        msg.sender.transfer(insureesWallet[msg.sender]); 
     }
 
    /**

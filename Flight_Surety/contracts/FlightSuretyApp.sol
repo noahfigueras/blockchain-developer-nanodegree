@@ -30,6 +30,8 @@ contract FlightSuretyApp {
 
     struct Flight {
         bool isRegistered;
+        string name;
+        uint256 departure;
         uint8 statusCode;
         uint256 updatedTimestamp;        
         address airline;
@@ -135,7 +137,7 @@ contract FlightSuretyApp {
         bytes32 flightKey = getFlightKey(msg.sender,flightName, departure);
         require(!flights[flightKey].isRegistered, "Flight is already registered.");
 
-        flights[flightKey] = FLight({
+        flights[flightKey] = Flight({
             isRegistered: true,
             name: flightName,
             departure: departure,
@@ -150,7 +152,7 @@ contract FlightSuretyApp {
     }
     
     // @dev Buy Insurance for registered flight 
-    function buy(bytes32 flightKey) 
+    function buy(bytes32 flightKey) public
     requireIsOperational
     {
     require(flights[flightKey].isRegistered, "Flight is not registered");
@@ -167,14 +169,14 @@ contract FlightSuretyApp {
                                 )
                                 requireIsOperational
                                 internal
-                                pure
     {
         //Update FLight Info
-        flights[flight].updatedTimestamp = timestamp;
-        flights[flight].statusCode = statusCode;
+        bytes32 flightKey = getFlightKey(airline, flight, timestamp);
+        flights[flightKey].updatedTimestamp = timestamp;
+        flights[flightKey].statusCode = statusCode;
 
-        if(statuscode == 20){
-            dataContract.CreditInsuree(flight,airline);
+        if(statusCode == STATUS_CODE_LATE_AIRLINE){
+            dataContract.creditInsurees(flightKey, airline);
         }
     }
 
