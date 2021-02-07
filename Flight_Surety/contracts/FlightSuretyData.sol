@@ -213,6 +213,7 @@ contract FlightSuretyData {
     function buy (bytes32 flight, address airlineAddress) external payable
     {
         require(msg.value <= 1 ether);
+        require(msg.value >= 0.1 ether);
         //Check if Insurance for flight is created
         if(insurances[flight].flightKey != flight){
             insurances[flight].airline = airlineAddress;

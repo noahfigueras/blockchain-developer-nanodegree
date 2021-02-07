@@ -12,7 +12,7 @@ export default class Contract {
         this.flightSuretyData = new this.web3.eth.Contract(FlightSuretyData.abi, config.dataAddress);
         this.owner = null;
         this.airlines = [];
-        this.passengers = [];
+        this.passenger = null;
         this.flights = new Map();
         this.initialize(callback);
     }
@@ -21,7 +21,7 @@ export default class Contract {
         let accts = await this.web3.eth.getAccounts();
            
         this.owner = accts[0];
-        this.passangers = accts[0];
+        this.passenger = accts[0];
 
         const flights = ['BP209', 'AM560', 'LM324', 'MB098'];
 
@@ -57,17 +57,30 @@ export default class Contract {
         for(let i=0; i < flights.length; i++){
             try {
                 let departure = Math.floor(new Date(2019, 3, 1, 22, 30, 0, 0) / 1000);
-                await this.flightSuretyApp.methods.registerFlight(departure,flights[i]);
                 this.flights.set(flights[i], {
                     airlineAddress: firstAirline,
                     name: flights[i],
-                    departure: departure,
+                    departure: departure
                 });
+                let obj = this.flights.get(flights[i]);
+                let key = await this.flightSuretyApp.methods.getFlightKeyExternal(obj.airlineAddress, obj.name, obj.departure);
+                await this.flightSuretyApp.methods.registerFlight(obj.departure, obj.airlineAddress, obj.name);
                 console.log('Initial Flights successfully registered for firstAirline.');
             } catch(e) {
                 console.log(e);
                 console.log('Error Initi First Airline Flights.');
             }
+        }
+
+        //Passanger Buys Insurance
+        let obj = this.flights.get('BP209');
+        try {
+            await this.flightSuretyApp.methods.buy(obj.name, obj.airlineAddress, obj.departure)
+            .send({from: this.passenger, value: this.web3.utils.toWei('0.2', 'ether')});
+            console.log('Insurance successfully bought')
+        } catch(e) {
+            console.log(e)
+            console.log('Error buying insurance')
         }
         callback();
     }
@@ -93,5 +106,20 @@ export default class Contract {
             .send({ from: self.owner}, (error, result) => {
                 callback(error, payload);
             });
+    }
+
+    async buyInsurance(flight, callback) {
+    let self = this;
+    let obj = self.flights.get(flight)
+
+    await self.flightSuretyApp.methods.buy(obj.name, obj.airlineAddress, obj.departure)
+        .send({from: self.passenger, value: self.web3.utils.toWei('0.2', 'ether')}, (error, result) => {
+            callback(error, obj);
+        });
+    }
+
+    withDraw(callback) {
+    let self = this;
+    self.flightSuretyData.methods.withdraw().call({from: self.passenger}, callback);
     }
 }

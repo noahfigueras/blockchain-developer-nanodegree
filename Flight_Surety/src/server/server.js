@@ -66,11 +66,11 @@ flightSuretyApp.events.OracleRequest({
                     value.timestamp,
                     randomStatusCode
                     ).send( 
-                        {from: oracle.address, gas:55555555}
+                        {from: oracle.address}
                     ).then(res => {
                     console.log(`--> Report from oracles(${oracle.address}).index(${index}) 👏🏽 accepted with status code ${randomStatusCode}`);
                 }).catch(err => {
-                                console.log(`--> Report from oracles(${oracle.address}).index(${index}) ❌ rejected with status code ${randomStatusCode}`);
+                    console.log(`--> Report from oracles(${oracle.address}).index(${index}) ❌ rejected with status code ${randomStatusCode}`);
                 })
             })
         })

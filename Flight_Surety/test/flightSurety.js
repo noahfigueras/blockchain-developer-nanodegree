@@ -144,6 +144,7 @@ contract('Flight Surety Tests', function (accounts) {
     //Register Airline with Multiparty test 2
     try {
         await flightSuretyData.vote(testAirline, {from: accounts[1]});
+        await flightSuretyData.vote(testAirline, {from: accounts[4]});
         await flightSuretyData.vote(testAirline, {from: accounts[3]});
     }
     catch(e) {
@@ -153,5 +154,17 @@ contract('Flight Surety Tests', function (accounts) {
     //ASSERT
     assert.equal(test1, true, "RegisterAirline should not have worked");
     assert.equal(test2, false, "RegisterAirline should have worked");
+  });
+
+  
+  it('(flight) Comparing FLight KEYS', async () => {
+
+    const flightSuretyData = await FlightSuretyData.deployed()
+    const flightSurety = await FlightSuretyApp.deployed()
+    let departure = Math.floor(new Date(2019, 3, 1, 22, 30, 0, 0) / 1000);
+    let key1 = await flightSurety.getFlightKeyExternal(firstAirline,'BP209', departure);
+    let key2 = await flightSurety.getFlightKeyExternal(firstAirline,'BP209', departure);
+
+    assert.equal(key1,key2, "Different keys with same values");
   });
 });

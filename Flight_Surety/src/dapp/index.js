@@ -22,7 +22,18 @@ import './flightsurety.css';
             // Write transaction
             contract.fetchFlightStatus(flight, (error, result) => {
                 display('Oracles', 'Trigger oracles', [ { label: 'Fetch Flight Status', error: error, value: result.flight + ' ' + result.timestamp} ]);
+                buy(contract, flight)
             });
+        })
+
+        DOM.elid('withdrawal').addEventListener('click', () => {
+            contract.withDraw((error, result) => {
+                if(error){
+                    console.log(error)
+                } else {
+                    console.log(result)
+                }
+            })
         })
 
     });
@@ -30,6 +41,24 @@ import './flightsurety.css';
 
 })();
 
+function buy(contract, flight) {
+    let button = document.createElement("button");
+    let displayDiv = DOM.elid("display-wrapper");
+    let section = DOM.section();
+    button.innerHTML = 'Buy Insurance';
+    //button.id = 'buy-insurance';
+    button.addEventListener('click', () => {
+        contract.buyInsurance(flight, (error, result) => {
+            if(error){
+                console.log(error)
+            } else {
+                console.log('Insurance bought')
+            }
+        });
+    });
+    section.appendChild(button);
+    displayDiv.append(section)
+}
 
 function display(title, description, results) {
     let displayDiv = DOM.elid("display-wrapper");
@@ -42,8 +71,8 @@ function display(title, description, results) {
         row.appendChild(DOM.div({className: 'col-sm-8 field-value'}, result.error ? String(result.error) : String(result.value)));
         section.appendChild(row);
     })
-    displayDiv.append(section);
 
+    displayDiv.append(section);
 }
 
 

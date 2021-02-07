@@ -128,13 +128,14 @@ contract FlightSuretyApp {
     function registerFlight
                                 (
                                     uint256 departure,
+                                    address airlineAddress,
                                     string flightName
                                 )
                                 public
                                 requireIsOperational
                                 requireAirlineFunded(msg.sender)
     {
-        bytes32 flightKey = getFlightKey(msg.sender,flightName, departure);
+        bytes32 flightKey = getFlightKey(airlineAddress, flightName, departure);
         require(!flights[flightKey].isRegistered, "Flight is already registered.");
 
         flights[flightKey] = Flight({
@@ -143,18 +144,28 @@ contract FlightSuretyApp {
             departure: departure,
             statusCode: 0,
             updatedTimestamp: now,
-            airline: msg.sender
+            airline: airlineAddress
         });
 
-        dataContract.addFlightKeyToAirline(msg.sender, flightKey);
+        dataContract.addFlightKeyToAirline(airlineAddress, flightKey);
         emit FlightRegistered(flightKey);
  
     }
-    
-    // @dev Buy Insurance for registered flight 
-    function buy(bytes32 flightKey) public
+
+    // @dev Vote for Airline 
+    function vote(address airlineAddress) public
     requireIsOperational
     {
+        dataContract.vote(airlineAddress);
+    }
+    
+    // @dev Buy Insurance for registered flight 
+    function buy(string flightName, address airlineAddress, uint256 departure) 
+    public
+    payable
+    requireIsOperational
+    {
+    bytes32 flightKey = getFlightKey(airlineAddress ,flightName, departure);
     require(flights[flightKey].isRegistered, "Flight is not registered");
     dataContract.buy(flightKey,flights[flightKey].airline);
     }
@@ -314,6 +325,19 @@ contract FlightSuretyApp {
         }
     }
 
+
+    function getFlightKeyExternal
+                        (
+                            address airline,
+                            string flight,
+                            uint256 timestamp
+                        )
+                        pure
+                        external
+                        returns(bytes32) 
+    {
+        return keccak256(abi.encodePacked(airline, flight, timestamp));
+    }
 
     function getFlightKey
                         (
