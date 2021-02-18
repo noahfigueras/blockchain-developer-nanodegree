@@ -1,6 +1,14 @@
 # Udacity Blockchain Capstone
 
-The capstone will build upon the knowledge you have gained in the course in order to build a decentralized housing product. 
+The capstone project consist in the development of ERC721 tokens to represent Real Estate. So, houses can be traded in the opensea marketplace through the tokens.
+
+# Instructions to reproduce
+* In order to test the solidity contracts code: use truffle develop test.  
+* Contract Address: 0xFf288D1A6072100b4d96276C19bAC21a7Ef3cCEE   
+* [EtherScan Link](https://rinkeby.etherscan.io/address/0xff288d1a6072100b4d96276c19bac21a7ef3ccee#events)  
+
+* [OpenSea Testnet Marketplace Link With houses listed](https://testnets.opensea.io/assets/0xFf288D1A6072100b4d96276C19bAC21a7Ef3cCEE/0)
+* The NFT's listed are 1 to 5 and you check out how I listed and transfered accoutn ownership below.
 
 # Project Resources
 

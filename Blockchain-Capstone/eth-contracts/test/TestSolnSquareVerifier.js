@@ -11,7 +11,7 @@ contract('SolnSquareVerifier', accounts => {
     const account_two = accounts[1];
 
     describe('SolnSquareVerifier test', function () {
-        beforeEach(async function () {
+        before(async function () {
             this.contract = await SolnSquareVerifier.new({from: account_one});
 
         })

@@ -104,9 +104,9 @@ function addSolution(uint[2] memory a, uint[2][2] memory b, uint[2] memory c, ui
 //  - make sure you handle metadata as well as tokenSuplly
 function mintNFT(uint[2] memory input, address to) public{
     bytes32 hash = keccak256(abi.encode(input[0],input[1]));
-   // require(solutions[hash].solutionAddress != address(0));
-    //require(solutions[hash].passed == false);
-   // require(solutions[hash].solutionAddress == msg.sender);
+    require(solutions[hash].solutionAddress != address(0));
+    require(solutions[hash].passed == false);
+    require(solutions[hash].solutionAddress == msg.sender);
 
     super.mint(to, solutions[hash].index);
     solutions[hash].passed = true;
