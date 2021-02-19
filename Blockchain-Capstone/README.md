@@ -9,7 +9,9 @@ The capstone project consist in the development of ERC721 tokens to represent Re
 
 * [OpenSea Testnet Marketplace Link With houses listed](https://testnets.opensea.io/assets/0xFf288D1A6072100b4d96276C19bAC21a7Ef3cCEE/0)
 * The NFT's listed are 1 to 5 and you check out how I listed and transfered accoutn ownership below.
-
+* Contract abi:
+ \eth-contracts\build\contracts\SolnSquareVerifier.json
+  \eth-contracts\build\contracts\CustomERC721Token.json
 # Project Resources
 
 * [Remix - Solidity IDE](https://remix.ethereum.org/)
